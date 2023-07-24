@@ -5,22 +5,17 @@
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-#define wifi_ssid "KOSAN"
-#define wifi_password "yanpri2023"
+#define wifi_ssid "aiocyber"
+// #define wifi_password "" 
 
-// #define mqtt_server "103.157.27.219"
-// #define mqtt_user "agpot123"
-// #define mqtt_password ""
+#define mqtt_server "demo.thingsboard.io" //set host
+#define mqtt_user "sensor-ultrasonic-aio" //set token
+#define mqtt_password "" //empty if demo
 
-#define mqtt_server "demo.thingsboard.io"
-#define mqtt_user "sensor-ultrasonic-aio"
-#define mqtt_password ""
+#define TRIG_PIN 14
+#define ECHO_PIN 27
 
-float h, t, f;
-
-int data1 = 24;
-int data2 = 55;
-int data3 = 0;
+float duration, distance;
 int kirim = 0;
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -35,13 +30,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 void setup_wifi() {
   delay(10);
-  // We start by connecting to a WiFi network
-  Serial.println();
+  Serial.println(); // We start by connecting to a WiFi network
   Serial.print("Connecting to ");
   Serial.println(wifi_ssid);
-
-  WiFi.begin(wifi_ssid, wifi_password);
-
+  WiFi.begin(wifi_ssid);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -53,26 +45,33 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
+void setup_readVOltage() {
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+}
+
+void readVoltage() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2); //clear trig
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW); //pulse set to 10ms
+  duration = pulseIn(ECHO_PIN, HIGH);
+  distance = duration*0.034 / 2; //0.034 is speed of sound wave
+  Serial.print("distance: ");
+  Serial.println(distance);
+}
 
 void setup() {
   Serial.begin(9600);
   setup_wifi();
-  // client.setServer(mqtt_server, 1112);
-  client.setServer(mqtt_server, 1883);
-
+  setup_readVOltage();
+  client.setServer(mqtt_server, 1883); // client.setServer(mqtt_server, port)
   client.setCallback(callback);
-
   delay(1500);
 }
 
 void loop() {
-
-
-  // if (!client.connected()) {
-  //   reconnect();
-  // }
-
-
   while (!client.connected()) {
     // Serial.print("Attempting MQTT connection...");
     // Attempt to connect
@@ -86,8 +85,9 @@ void loop() {
       delay(5000);
     }
   }
-
-  String data = "{\"humidity\":\"" + String(data1) + "\",\"temperature\":\"" + String(data2) + "\",\"rainfall\":\"" + String(data3) + "\"}";
+  readVoltage();
+  String data = "{\"distance\":\"" + String (distance) + "\"}";
+  // String data = "{\"humidity\":\"" + String(data1) + "\",\"temperature\":\"" + String(data2) + "\",\"rainfall\":\"" + String(data3) + "\"}";
   client.publish("v1/devices/me/telemetry", data.c_str());
   kirim = kirim + 1;
   Serial.print("Pengiriman Berhasil ");
