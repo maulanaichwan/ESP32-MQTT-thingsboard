@@ -5,18 +5,22 @@
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-#define wifi_ssid "aiocyber"
-// #define wifi_password "" 
+#define wifi_ssid "aio-utility"
+#define wifi_password "OTSuk@123" 
 
 #define mqtt_server "demo.thingsboard.io" //set host
 #define mqtt_user "sensor-ultrasonic-aio" //set token
 #define mqtt_password "" //empty if demo
 
-#define TRIG_PIN 14
-#define ECHO_PIN 27
+#define ANALOG_IN_PIN 34     // some analog input sensor ref: https://lastminuteengineers.com/voltage-sensor-arduino-tutorial/
 
-float duration, distance;
-int kirim = 0;
+float adc_voltage, in_voltage;
+float R1 = 30000.0; //value resistor
+float R2 = 7500.0;
+float ref_voltage = 5.0; //voltage reference
+int kirim = 0; // counter for msg send
+int adc_value = 0; //read adc value through sensor
+
 
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
@@ -33,7 +37,7 @@ void setup_wifi() {
   Serial.println(); // We start by connecting to a WiFi network
   Serial.print("Connecting to ");
   Serial.println(wifi_ssid);
-  WiFi.begin(wifi_ssid);
+  WiFi.begin(wifi_ssid, wifi_password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -45,27 +49,21 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
-void setup_readVOltage() {
-  pinMode(TRIG_PIN, OUTPUT);
-  pinMode(ECHO_PIN, INPUT);
+void setup_readVoltage() {
+  adc_value = analogRead(ANALOG_IN_PIN);
 }
 
 void readVoltage() {
-  digitalWrite(TRIG_PIN, LOW);
-  delayMicroseconds(2); //clear trig
-  digitalWrite(TRIG_PIN, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(TRIG_PIN, LOW); //pulse set to 10ms
-  duration = pulseIn(ECHO_PIN, HIGH);
-  distance = duration*0.034 / 2; //0.034 is speed of sound wave
-  Serial.print("distance: ");
-  Serial.println(distance);
+  adc_voltage = (adc_value*ref_voltage) / 1024;
+  in_voltage = adc_voltage*(R1+R2)/R2;//0.034 is speed of sound wave
+  Serial.print("Input Voltage: ");
+  Serial.println(in_voltage, 2);
 }
 
 void setup() {
   Serial.begin(9600);
   setup_wifi();
-  setup_readVOltage();
+  setup_readVoltage();
   client.setServer(mqtt_server, 1883); // client.setServer(mqtt_server, port)
   client.setCallback(callback);
   delay(1500);
@@ -86,7 +84,7 @@ void loop() {
     }
   }
   readVoltage();
-  String data = "{\"distance\":\"" + String (distance) + "\"}";
+  String data = "{\"voltage\":\"" + String (in_voltage) + "\"}";
   // String data = "{\"humidity\":\"" + String(data1) + "\",\"temperature\":\"" + String(data2) + "\",\"rainfall\":\"" + String(data3) + "\"}";
   client.publish("v1/devices/me/telemetry", data.c_str());
   kirim = kirim + 1;
