@@ -5,14 +5,17 @@
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-#define wifi_ssid "aio-utility"
-#define wifi_password "OTSuk@123" 
+// #define wifi_ssid "aio-utility" //for production
+// #define wifi_password "OTSuk@123" 
+
+#define wifi_ssid "V2030" //for testing
+#define wifi_password "alanjanuari"
 
 #define mqtt_server "demo.thingsboard.io" //set host
-#define mqtt_user "sensor-ultrasonic-aio" //set token
+#define mqtt_user "ZGuQ0mfS3LxwMAi0UPht" //set token
 #define mqtt_password "" //empty if demo
 
-#define ANALOG_IN_PIN 34     // some analog input sensor ref: https://lastminuteengineers.com/voltage-sensor-arduino-tutorial/
+#define ANALOG_IN_PIN 35     // some analog input sensor ref: https://lastminuteengineers.com/voltage-sensor-arduino-tutorial/
 
 float adc_voltage, in_voltage;
 float R1 = 30000.0; //value resistor
@@ -54,8 +57,8 @@ void setup_readVoltage() {
 }
 
 void readVoltage() {
-  adc_voltage = (adc_value*ref_voltage) / 1024;
-  in_voltage = adc_voltage*(R1+R2)/R2;//0.034 is speed of sound wave
+  adc_voltage = (adc_value*ref_voltage) / 4096;
+  in_voltage = adc_voltage*(R1+R2)/R2; //0.034 is speed of sound wave
   Serial.print("Input Voltage: ");
   Serial.println(in_voltage, 2);
 }
@@ -90,6 +93,8 @@ void loop() {
   kirim = kirim + 1;
   Serial.print("Pengiriman Berhasil ");
   Serial.println(kirim);
+  Serial.print("ADC value: ");
+  Serial.println(adc_value);
 
   client.loop();
   delay(2000);
