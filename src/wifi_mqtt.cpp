@@ -15,14 +15,16 @@ PubSubClient client(espClient);
 #define mqtt_user "ZGuQ0mfS3LxwMAi0UPht" //set token
 #define mqtt_password "" //empty if demo
 
-#define ANALOG_IN_PIN 35     // some analog input sensor ref: https://lastminuteengineers.com/voltage-sensor-arduino-tutorial/
+#define ANALOG_IN1_PIN 34
+#define ANALOG_IN2_PIN 35     // some analog input sensor ref: https://lastminuteengineers.com/voltage-sensor-arduino-tutorial/
 
-float adc_voltage, in_voltage;
+float adc_voltage1, in_voltage1;
+float adc_voltage2, in_voltage2;
 float R1 = 30000.0; //value resistor
 float R2 = 7500.0;
 float ref_voltage = 5.0; //voltage reference
 int kirim = 0; // counter for msg send
-int adc_value = 0; //read adc value through sensor
+int adc_value1 = 0,adc_value2 = 0; //read adc value through sensor
 
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -52,21 +54,22 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
-void setup_readVoltage() {
-  adc_value = analogRead(ANALOG_IN_PIN);
-}
-
 void readVoltage() {
-  adc_voltage = (adc_value*ref_voltage) / 4096;
-  in_voltage = adc_voltage*(R1+R2)/R2; //0.034 is speed of sound wave
-  Serial.print("Input Voltage: ");
-  Serial.println(in_voltage, 2);
+  adc_value1 = analogRead(ANALOG_IN1_PIN);
+  adc_value2 = analogRead(ANALOG_IN2_PIN);
+  adc_voltage1 = (adc_value1*ref_voltage) / 4096;
+  adc_voltage2 = (adc_value2*ref_voltage) / 4096;
+  in_voltage1 = adc_voltage1*(R1+R2)/R2;
+  in_voltage2 = adc_voltage2*(R1+R2)/R2; //0.034 is speed of sound wave
+  Serial.print("Input Voltage1: ");
+  Serial.println(in_voltage1, 2);
+  Serial.print("Input Voltage2: ");
+  Serial.println(in_voltage2, 2);
 }
 
 void setup() {
   Serial.begin(9600);
   setup_wifi();
-  setup_readVoltage();
   client.setServer(mqtt_server, 1883); // client.setServer(mqtt_server, port)
   client.setCallback(callback);
   delay(1500);
@@ -87,14 +90,16 @@ void loop() {
     }
   }
   readVoltage();
-  String data = "{\"voltage\":\"" + String (in_voltage) + "\"}";
+  String data = "{\"voltage1\":\"" + String (in_voltage1) + "\",\"voltage2\":\"" + String (in_voltage2) + "\"}";
   // String data = "{\"humidity\":\"" + String(data1) + "\",\"temperature\":\"" + String(data2) + "\",\"rainfall\":\"" + String(data3) + "\"}";
   client.publish("v1/devices/me/telemetry", data.c_str());
   kirim = kirim + 1;
   Serial.print("Pengiriman Berhasil ");
   Serial.println(kirim);
-  Serial.print("ADC value: ");
-  Serial.println(adc_value);
+  Serial.print("ADC value1: ");
+  Serial.println(adc_value1);
+  Serial.print("ADC value2: ");
+  Serial.println(adc_value2);
 
   client.loop();
   delay(2000);
